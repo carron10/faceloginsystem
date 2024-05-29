@@ -310,8 +310,9 @@ def handle_image(image_data):
             socketio.emit('faceLocation', {'loc':face_locations})
     # except Exception as e:
     #     print("Error", str(e))
-
-
+@app.route("/")
+def home():
+    return "This app is running"
 with app.app_context():
     db.drop_all()
     db.create_all()
