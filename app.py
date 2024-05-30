@@ -279,8 +279,9 @@ def remove(email):
         directory_path = Path(f"./user_faces/{email}")
         if directory_path.exists():
             rmtree(directory_path)
+        return "Done",200
     except Exception as e:
-        print(f"Error deleting user {email}: {e}"), 5000
+        return f"Error deleting user {email}: {e}",5000
 
 
 @socketio.on('image')
