@@ -274,6 +274,8 @@ def remove(email):
     try:
         existing_user = UserTokens.query.filter(
             UserTokens.email == email).first()
+        if not existing_user:
+            return "User Does not Exist",404
         db.session.delete(existing_user)
         # Check if the directory exists and remove it
         directory_path = Path(f"./user_faces/{email}")
