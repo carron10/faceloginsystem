@@ -268,6 +268,21 @@ def register_token_received():
     token_received = True
 
 
+@app.route("/remove/<email>")
+def remove(email):
+
+    try:
+        existing_user = UserTokens.query.filter(
+            UserTokens.email == email).first()
+        db.session.delete(existing_user)
+        # Check if the directory exists and remove it
+        directory_path = Path(f"./user_faces/{email}")
+        if directory_path.exists():
+            rmtree(directory_path)
+    except Exception as e:
+        print(f"Error deleting user {email}: {e}"), 5000
+
+
 @socketio.on('image')
 def handle_image(image_data):
 
@@ -278,11 +293,13 @@ def handle_image(image_data):
     img_binary = base64.b64decode((image_data + "==").encode('utf-8'))
     face_locations, image = detectFace(img_binary)
     image_name = str(uuid.uuid4()) + ".jpg"
+
     def get_token():
         if "user_token" in session:
             return session['user_token']
         else:
-            existing_user = UserTokens.query.filter(UserTokens.email == email).first()
+            existing_user = UserTokens.query.filter(
+                UserTokens.email == email).first()
             return existing_user.token
     if face_locations:
         # Save images
@@ -293,10 +310,11 @@ def handle_image(image_data):
         recognised_images += 1
         session['recognised_image_count'] = recognised_images
         # Send face locations to all connected clients
-        
+
         if recognised_images >= REGISTER_IMAGE_SAMPLE_COUNT:
             if 'alread_registered' in session:
-                socketio.emit('faceLocation', {'loc':face_locations,'register_token':get_token()})
+                socketio.emit('faceLocation', {
+                              'loc': face_locations, 'register_token': get_token()})
                 return
 
             session['alread_registered'] = True
@@ -305,14 +323,19 @@ def handle_image(image_data):
             db.session.add(user)
             db.session.commit()
             session['user_token'] = token
-            socketio.emit('faceLocation', {'loc':face_locations,'register_token':token})
+            socketio.emit('faceLocation', {
+                          'loc': face_locations, 'register_token': token})
         else:
-            socketio.emit('faceLocation', {'loc':face_locations})
+            socketio.emit('faceLocation', {'loc': face_locations})
     # except Exception as e:
     #     print("Error", str(e))
+
+
 @app.route("/")
 def home():
     return "This app is running"
+
+
 with app.app_context():
     db.drop_all()
     db.create_all()
