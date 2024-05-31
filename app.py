@@ -27,8 +27,7 @@ app = Flask(__name__, static_url_path='',
 app.config.from_pyfile('config.py')
 db.init_app(app)
 
-socketio = SocketIO(app, cors_allowed_origins="*",
-                    path='/websocket', resource='/websocket')
+socketio = SocketIO(app, cors_allowed_origins="*", path='/websocket')
 # Security
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 
