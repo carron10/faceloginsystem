@@ -79,20 +79,23 @@ def detectFace(img_binary):
 def image_login():
     try:
         data = request.get_json()
-        user_email = data.get('email')
+        user_email = None
 
+        if "email" in data:
+            user_email=data['email']
+          
         if not user_email:
-            return "No email provided", 404
+            return jsonify({'message':"No email provided"}), 404
 
         user_folder = f"/user_faces/{user_email}"
 
         if not os.path.exists(user_folder):
-            return "User face images folder not found", 404
+            return jsonify({'message':"User face images folder not found"}), 404
 
         user = UserTokens.query.filter(UserTokens.email == user_email).first()
 
         if not user:
-            return "The user email doesn't exist", 404
+            return jsonify({'message':"The user email doesn't exist"}), 404
 
         if 'pic' in data and data['pic'] is not None:
             image_data = data['pic'].split(',')[1]
