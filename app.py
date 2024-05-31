@@ -27,7 +27,8 @@ app = Flask(__name__, static_url_path='',
 app.config.from_pyfile('config.py')
 db.init_app(app)
 
-socketio = SocketIO(app, cors_allowed_origins="*",path='/websocket',resource='/websocket')
+socketio = SocketIO(app, cors_allowed_origins="*",
+                    path='/websocket', resource='/websocket')
 # Security
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 
@@ -78,55 +79,52 @@ def detectFace(img_binary):
 @app.route('/api/face_login', methods=['POST'])
 def image_login():
     # try:
-        data = request.get_json()
-        user_email = None
+    data = request.get_json()
+    user_email = None
 
-        if "email" in data:
-            user_email=data['email']
-          
-        if not user_email:
-            return jsonify({'message':"No email provided"}), 404
+    if "email" in data:
+        user_email = data['email']
 
-        user_folder = f"./user_faces/{user_email}"
+    if not user_email:
+        return jsonify({'message': "No email provided"}), 404
 
-        if not os.path.exists(user_folder):
-            return jsonify({'message':"User face images folder not found"}), 404
+    user_folder = f"./user_faces/{user_email}"
 
-        user = UserTokens.query.filter(UserTokens.email == user_email).first()
+    if not os.path.exists(user_folder):
+        return jsonify({'message': "User face images folder not found"}), 404
 
-        if not user:
-            return jsonify({'message':"The user email doesn't exist"}), 404
+    user = UserTokens.query.filter(UserTokens.email == user_email).first()
 
-        if 'pic' in data and data['pic'] is not None:
-            image_data = data['pic'].split(',')[1]
-            img_binary = base64.b64decode((image_data + "==").encode('utf-8'))
+    if not user:
+        return jsonify({'message': "The user email doesn't exist"}), 404
 
+    if 'pic' in data and data['pic'] is not None:
+        image_data = data['pic'].split(',')[1]
+        img_binary = base64.b64decode((image_data + "==").encode('utf-8'))
 
-            image = Image.open(io.BytesIO(img_binary))
-            rgb_image = image.convert('RGB')
-            image_array = np.array(rgb_image)
+        image = Image.open(io.BytesIO(img_binary))
+        rgb_image = image.convert('RGB')
+        image_array = np.array(rgb_image)
 
-            known_face_encodings = []
-            for filename in os.listdir(user_folder):
-                image_path = os.path.join(user_folder, filename)
-                known_image = face_recognition.load_image_file(image_path)
-                face_encodings = face_recognition.face_encodings(known_image)
-                if face_encodings:
-                    known_face_encodings.append(face_encodings[0])
+        known_face_encodings = []
+        face_encodings = face_recognition.face_encodings(image_array)
+        if len(face_encodings) == 0:
+            return jsonify({'error': 'No face detected in the provided image'}), 404
+        for filename in os.listdir(user_folder):
+            image_path = os.path.join(user_folder, filename)
+            known_image = face_recognition.load_image_file(image_path)
+            face_encodings = face_recognition.face_encodings(known_image)
+            if face_encodings:
+                known_face_encodings.append(face_encodings[0])
+                results = face_recognition.compare_faces(
+                    [face_encodings[0]], face_encodings)
+                if results[0] == True:
+                    return jsonify({'message': 'Face recognized, login successful'}), 200
 
-            face_encodings = face_recognition.face_encodings(image_array)
-
-            if len(face_encodings) == 0:
-                return jsonify({'error': 'No face detected in the provided image'}), 404
-
-            results = face_recognition.compare_faces(
-                known_face_encodings, face_encodings[0])
-            if True in results:
-                return jsonify({'message': 'Face recognized, login successful'}), 200
-            else:
-                return jsonify({'message': 'Face not recognized, login failed'}), 500
-        else:
-            return jsonify({'error': 'No image data found in the request'}), 500
+        
+        return jsonify({'message': 'Face not recognized, login failed'}), 500
+    else:
+        return jsonify({'error': 'No image data found in the request'}), 500
     # except Exception as e:
     #     return jsonify({'error': str(e)}), 500
 
@@ -145,7 +143,6 @@ def process_image():
     if not existing_user:
         return "User not exist", 500
 
-
     # Extract the base64-encoded image data from the form field "pic"
     if 'pic' in data and data['pic'] is not None:
         # Extract the base64 encoded image data from the JSON
@@ -159,7 +156,7 @@ def process_image():
         if face_locations:
             return jsonify({'faceLocation': face_locations})
         else:
-            return jsonify({'error': 'No Face Found'}),404
+            return jsonify({'error': 'No Face Found'}), 404
     else:
         return 'No image data found in the request', 500
 
@@ -244,15 +241,15 @@ def remove(email):
         existing_user = UserTokens.query.filter(
             UserTokens.email == email).first()
         if not existing_user:
-            return "User Does not Exist",404
+            return "User Does not Exist", 404
         db.session.delete(existing_user)
         # Check if the directory exists and remove it
         directory_path = Path(f"./user_faces/{email}")
         if directory_path.exists():
             rmtree(directory_path)
-        return "Done",200
+        return "Done", 200
     except Exception as e:
-        return f"Error deleting user {email}: {e}",5000
+        return f"Error deleting user {email}: {e}", 5000
 
 
 @socketio.on('image')
