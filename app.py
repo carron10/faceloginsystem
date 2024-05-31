@@ -38,10 +38,10 @@ REGISTER_IMAGE_SAMPLE_COUNT = 10
 cors = CORS(app, origins=[r"*"], resources={r"/*": {"origins": r"*"}})
 
 
-app.config["SESSION_FILE_DIR"] = mkdtemp()
-app.config["SESSION_PERMANENT"] = False
-app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
+# app.config["SESSION_FILE_DIR"] = mkdtemp()
+# app.config["SESSION_PERMANENT"] = False
+# app.config["SESSION_TYPE"] = "filesystem"
+# Session(app)
 
 
 def detectFace(img_binary):
@@ -99,7 +99,8 @@ def image_login():
 
         if 'pic' in data and data['pic'] is not None:
             image_data = data['pic'].split(',')[1]
-            img_binary = base64.b64decode(image_data + "==")
+            img_binary = base64.b64decode((image_data + "==").encode('utf-8'))
+
 
             image = Image.open(io.BytesIO(img_binary))
             rgb_image = image.convert('RGB')
@@ -307,6 +308,5 @@ def home():
 
 
 with app.app_context():
-    db.drop_all()
     db.create_all()
     # build_sample_db(app,user_datastore)
