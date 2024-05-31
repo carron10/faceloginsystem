@@ -86,17 +86,17 @@ def image_login():
         user_email = data['email']
 
     if not user_email:
-        return jsonify({'message': "No email provided"}), 404
+        return jsonify({'error': "No email provided"}), 404
 
     user_folder = f"./user_faces/{user_email}"
 
     if not os.path.exists(user_folder):
-        return jsonify({'message': "User face images folder not found"}), 404
+        return jsonify({'error': "User face images folder not found"}), 404
 
     user = UserTokens.query.filter(UserTokens.email == user_email).first()
 
     if not user:
-        return jsonify({'message': "The user email doesn't exist"}), 404
+        return jsonify({'error': "The user email doesn't exist"}), 404
 
     if 'pic' in data and data['pic'] is not None:
         image_data = data['pic'].split(',')[1]
@@ -106,18 +106,20 @@ def image_login():
         rgb_image = image.convert('RGB')
         image_array = np.array(rgb_image)
 
+        
+        unkown_face_encoding = face_recognition.face_encodings(image_array)
+        if len(unkown_face_encoding) == 0:
+            return jsonify({'message': 'No face detected in the provided image'}), 404
+        
         known_face_encodings = []
-        face_encodings = face_recognition.face_encodings(image_array)
-        if len(face_encodings) == 0:
-            return jsonify({'error': 'No face detected in the provided image'}), 404
         for filename in os.listdir(user_folder):
             image_path = os.path.join(user_folder, filename)
             known_image = face_recognition.load_image_file(image_path)
-            face_encodings = face_recognition.face_encodings(known_image)
-            if face_encodings:
-                known_face_encodings.append(face_encodings[0])
+            face_encoding = face_recognition.face_encodings(known_image)
+            if face_encoding:
+                known_face_encodings.append(face_encoding[0])
                 results = face_recognition.compare_faces(
-                    [face_encodings[0]], face_encodings)
+                    [face_encoding[0]], unkown_face_encoding[0])
                 if results[0] == True:
                     return jsonify({'message': 'Face recognized, login successful'}), 200
 
