@@ -20,12 +20,14 @@ from flask_cors import CORS, cross_origin
 import os
 from tempfile import mkdtemp
 from flask_session import Session
+
+
 app = Flask(__name__, static_url_path='',
             static_folder='static', template_folder='templates')
 app.config.from_pyfile('config.py')
 db.init_app(app)
 
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*",path='/websocket',resource='/websocket')
 # Security
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 
@@ -127,34 +129,17 @@ def image_login():
 @app.route('/api/face_detection/', methods=['POST'])
 def process_image():
     data = request.get_json()
-    re_register = None
     email = None
-    if 're_register' in data:
-        re_register = data['re_register']
+
     if "email" in data:
         email = data['email']
     else:
         return "No email specified", 404
     # Check if the user already registered
     existing_user = UserTokens.query.filter(UserTokens.email == email).first()
-    if existing_user:
-        if re_register:
-            try:
-                db.session.delete(existing_user)
-                # Check if the directory exists and remove it
-                directory_path = Path(f"./user_faces/{email}")
-                if directory_path.exists():
-                    rmtree(directory_path)
-            except Exception as e:
-                print(f"Error deleting user {email}: {e}")
-                return "Error deleting user {email}:{e}", 500
-        else:
-            return "Error user already registered", 500
-    db.session.commit()
-    print("sshsh", session)
-    if not ('recognised_image_count' in session):
-        session['recognised_image_count'] = 0
-    print("sshsh", session)
+    if not existing_user:
+        return "User not exist", 500
+
 
     # Extract the base64-encoded image data from the form field "pic"
     if 'pic' in data and data['pic'] is not None:
@@ -165,32 +150,11 @@ def process_image():
         # Convert the decoded image data into a PIL Image object
 
         face_locations, image = detectFace(img_binary)
-        image_name = str(uuid.uuid4()) + ".jpg"
+        # image_name = str(uuid.uuid4()) + ".jpg"
         if face_locations:
-            # Save images
-            os.makedirs(f"./user_faces/{email}/", exist_ok=True)
-            image.save(f"./user_faces/{email}/{image_name}")
-
-            recognised_images = session['recognised_image_count']
-            recognised_images += 1
-            session['recognised_image_count'] = recognised_images
-            # Send face locations to all connected clients
-            socketio.emit('faceLocation', face_locations)
-            print(session['recognised_image_count'], recognised_images)
-            if recognised_images >= REGISTER_IMAGE_SAMPLE_COUNT:
-                if 'alread_registered' in session:
-                    return jsonify({'register_token': token})
-
-                token = str(uuid.uuid4())
-                user = UserTokens(email=email, token=token)
-                db.session.add(user)
-                db.session.commit()
-                session['user_token'] = token
-                session['alread_registered'] = True
-                return jsonify({'register_token': token})
             return jsonify({'faceLocation': face_locations})
         else:
-            return jsonify({'error': 'No Face Found'})
+            return jsonify({'error': 'No Face Found'}),404
     else:
         return 'No image data found in the request', 500
 
