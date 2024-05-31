@@ -87,7 +87,7 @@ def image_login():
         if not user_email:
             return jsonify({'message':"No email provided"}), 404
 
-        user_folder = f"/user_faces/{user_email}"
+        user_folder = f"./user_faces/{user_email}"
 
         if not os.path.exists(user_folder):
             return jsonify({'message':"User face images folder not found"}), 404
