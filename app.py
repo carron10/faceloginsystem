@@ -77,7 +77,7 @@ def detectFace(img_binary):
 
 @app.route('/api/face_login', methods=['POST'])
 def image_login():
-    try:
+    # try:
         data = request.get_json()
         user_email = None
 
@@ -110,8 +110,9 @@ def image_login():
             for filename in os.listdir(user_folder):
                 image_path = os.path.join(user_folder, filename)
                 known_image = face_recognition.load_image_file(image_path)
-                known_face_encodings.append(
-                    face_recognition.face_encodings(known_image)[0])
+                face_encodings = face_recognition.face_encodings(known_image)
+                if face_encodings:
+                    known_face_encodings.append(face_encodings[0])
 
             face_encodings = face_recognition.face_encodings(image_array)
 
@@ -126,8 +127,8 @@ def image_login():
                 return jsonify({'message': 'Face not recognized, login failed'}), 500
         else:
             return jsonify({'error': 'No image data found in the request'}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    # except Exception as e:
+    #     return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/face_detection/', methods=['POST'])
